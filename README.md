@@ -4,9 +4,15 @@ This plugin for [Recaf](https://github.com/Col-E/Recaf) allows you to easily ren
 
 ### Installation
 
-Download the latest release of the plugin from the [Releases](https://github.com/kitakeyos2003/redP-for-recaf/releases/tag/master) page.
+Download the latest release of the plugin from the [Releases](https://github.com/kitakeyos2003/redP-plugins-for-recaf/releases) page.
 Copy the downloaded JAR file into the **\`plugins\`** directory of your Recaf installation.
 Usage
+
+1. Navigate to the `plugins` folder.
+    - Windows: `%APPDATA%/Recaf/plugins`
+	- Linux: `$HOME/Recaf/plugins`
+2. Copy plugin jar into this folder
+3. Run Recaf to verify your plugin loads.
 
 Open the Java project you want to modify in Recaf.
 Go to the **\`Plugins\`** menu and select **\`Rename Package\`**.
