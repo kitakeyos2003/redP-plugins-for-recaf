@@ -13,14 +13,19 @@ import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import me.coley.recaf.control.gui.GuiController;
 import me.coley.recaf.mapping.Mappings;
-import me.coley.recaf.ui.controls.view.ClassViewport;
-import me.coley.recaf.util.ClassUtil;
-import me.coley.recaf.workspace.Workspace;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import javafx.geometry.HPos;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 import me.coley.recaf.ui.controls.ViewportTabs;
 
 /**
@@ -31,17 +36,37 @@ import me.coley.recaf.ui.controls.ViewportTabs;
 public class RenamingTextField extends PopupWindow {
 
     private final GuiController controller;
-    private final TextField text;
+    private String packageName;
+    private CheckBox checkBox;
+    private TextField oldPackage, newPackage;
+    private TextField prefix, suffix;
     private Supplier<Map<String, String>> mapSupplier;
     private Consumer<Map<String, String>> onRename;
 
-    private RenamingTextField(GuiController controller, String initialText, Consumer<RenamingTextField> renameAction) {
+    private RenamingTextField(GuiController controller, String initialText, Consumer<RenamingTextField> renameAction, boolean isDefaultPackage) {
         this.controller = controller;
         setHideOnEscape(true);
         setAutoHide(true);
+
+        // Create checkbox
+        checkBox = new CheckBox("Default package");
+        checkBox.setSelected(isDefaultPackage);
+
+        // Create old package textbox
+        oldPackage = new TextField();
+        oldPackage.setPromptText("Enter old package");
+        oldPackage.setPrefWidth(400);
+        oldPackage.disableProperty().bind(checkBox.selectedProperty());
+
+        // Create new package textbox
+        newPackage = new TextField();
+        newPackage.setPromptText("Enter new package");
+        newPackage.setPrefWidth(400);
+
         setOnShown(e -> {
             // Disable root so key events do not get passed to the window that owns the rename popup.
             controller.windows().getMainWindow().getRoot().setDisable(true);
+
             // Center on main window
             Stage main = controller.windows().getMainWindow().getStage();
             int x = (int) (main.getX() + Math.round((main.getWidth() / 2) - (getWidth() / 2)));
@@ -49,41 +74,174 @@ public class RenamingTextField extends PopupWindow {
             setX(x);
             setY(y);
         });
+
         setOnHiding(e -> {
             // Re-enable root after completion/cancellation
             controller.windows().getMainWindow().getRoot().setDisable(false);
         });
-        text = new TextField(initialText);
-        text.getStyleClass().add("remap-field");
-        text.setPrefWidth(400);
+
+        // Create button
+        Button renameButton = new Button("Rename");
+        renameButton.setOnAction(e -> renameAction.accept(this));
+
+        // Combine checkbox, old package textbox, new package textbox, and button in a VBox
+        VBox vbox = new VBox(checkBox, oldPackage, newPackage, renameButton);
+        vbox.setSpacing(10);
+        vbox.setPadding(new Insets(10));
+
         // Close on hitting escape/close-window bind
-        text.setOnKeyPressed(e -> {
+        vbox.setOnKeyPressed(e -> {
             if (controller.config().keys().closeWindow.match(e) || e.getCode() == KeyCode.ESCAPE) {
                 hide();
             }
         });
-        // Set on-enter action
-        text.setOnAction(e -> renameAction.accept(this));
+
         // Setup & show
-        getScene().setRoot(text);
+        getScene().setRoot(vbox);
         Platform.runLater(() -> {
-            text.requestFocus();
-            text.selectAll();
+            if (isDefaultPackage) {
+                newPackage.requestFocus();
+                newPackage.setText(initialText);
+                newPackage.selectAll();
+            } else {
+                oldPackage.requestFocus();
+                newPackage.setText(initialText);
+            }
         });
+        setRename();
     }
 
-    /**
-     * @return Value of text-field.
-     */
-    public String getText() {
-        return text.getText();
+    private RenamingTextField(GuiController controller, Consumer<RenamingTextField> renameAction, String packageName) {
+        this.controller = controller;
+        this.packageName = packageName;
+        setHideOnEscape(true);
+        setAutoHide(true);
+        Label lbPrefix = new Label("Prefix");
+        Label lbSuffix = new Label("Suffix");
+        prefix = new TextField();
+        suffix = new TextField();
+
+        // Set prompt texts for text fields
+        prefix.setPromptText("Prefix");
+        suffix.setPromptText("Suffix");
+        Button addButton = new Button("Add");
+
+        // Create a GridPane to hold UI elements
+        GridPane gridPane = new GridPane();
+        gridPane.setPadding(new Insets(10));
+        gridPane.setHgap(10);
+        gridPane.setVgap(10);
+
+        // Add UI elements to the GridPane
+        gridPane.add(lbPrefix, 0, 0);
+        gridPane.add(prefix, 1, 0);
+        gridPane.add(lbSuffix, 0, 1);
+        gridPane.add(suffix, 1, 1);
+        gridPane.add(addButton, 1, 2);
+        gridPane.setHalignment(addButton, HPos.RIGHT);
+
+        setOnShown(e -> {
+            // Disable root so key events do not get passed to the window that owns the rename popup.
+            controller.windows().getMainWindow().getRoot().setDisable(true);
+
+            // Center on main window
+            Stage main = controller.windows().getMainWindow().getStage();
+            int x = (int) (main.getX() + Math.round((main.getWidth() / 2) - (getWidth() / 2)));
+            int y = (int) (main.getY() + Math.round((main.getHeight() / 2) - (getHeight() / 2)));
+            setX(x);
+            setY(y);
+        });
+
+        setOnHiding(e -> {
+            // Re-enable root after completion/cancellation
+            controller.windows().getMainWindow().getRoot().setDisable(false);
+        });
+
+        // Create button
+        addButton.setOnAction(e -> renameAction.accept(this));
+
+        // Close on hitting escape/close-window bind
+        gridPane.setOnKeyPressed(e -> {
+            if (controller.config().keys().closeWindow.match(e) || e.getCode() == KeyCode.ESCAPE) {
+                hide();
+            }
+        });
+
+        // Setup & show
+        getScene().setRoot(gridPane);
+        Platform.runLater(() -> {
+            prefix.requestFocus();
+            prefix.selectAll();
+
+        });
+        setPrefixOrSuffix();
     }
 
     /**
      * @param mapSupplier Mapping generator.
      */
-    public void setMapSupplier(Supplier<Map<String, String>> mapSupplier) {
-        this.mapSupplier = mapSupplier;
+    public void setRename() {
+        this.mapSupplier = new Supplier<Map<String, String>>() {
+            @Override
+            public Map<String, String> get() {
+                if (checkBox.isSelected()) {
+                    String renamed = newPackage.getText();
+                    Map<String, String> map = new HashMap<>();
+                    // Map all classes in the package
+                    controller.getWorkspace().getPrimaryClassNames().stream()
+                            .filter(n -> !n.contains("/")).forEach(n -> map.put(n, renamed + "/" + n));
+                    return map;
+                } else {
+                    String renamed = newPackage.getText();
+                    String oldName = oldPackage.getText();
+                    Map<String, String> map = new HashMap<>();
+                    // Map all classes in the package
+                    String prefix = oldName + "/";
+                    controller.getWorkspace().getPrimaryClassNames().stream()
+                            .filter(n -> n.startsWith(prefix))
+                            .forEach(n -> map.put(n, renamed + "/" + n.substring(oldName.length() + 1)));
+                    return map;
+                }
+            }
+        };
+    }
+
+    public void setPrefixOrSuffix() {
+        this.mapSupplier = new Supplier<Map<String, String>>() {
+            @Override
+            public Map<String, String> get() {
+
+                String pf = prefix.getText();
+                String sf = suffix.getText();
+                if (packageName == null) {
+                    Map<String, String> map = new HashMap<>();
+                    // Map all classes in the package
+                    controller.getWorkspace().getPrimaryClassNames().stream().forEach(n -> {
+                        String pkgName = n;
+                        String[] nP = pkgName.split("/");
+                        String viewName = nP[nP.length - 1];
+
+                        String newName = pf + viewName + sf;
+                        nP[nP.length - 1] = newName;
+
+                        String result = String.join("/", nP);
+                        map.put(n, result);
+                    });
+                    return map;
+                } else {
+                    Map<String, String> map = new HashMap<>();
+                    // Map all classes in the package
+                    String prefix = packageName + "/";
+                    controller.getWorkspace().getPrimaryClassNames().stream()
+                            .filter(n -> n.startsWith(prefix))
+                            .forEach(n -> {
+                                String newName = packageName + "/" + pf + n.substring(packageName.length() + 1) + sf;
+                                map.put(n, newName);
+                            });
+                    return map;
+                }
+            }
+        };
     }
 
     /**
@@ -94,51 +252,6 @@ public class RenamingTextField extends PopupWindow {
     }
 
     /**
-     * Create a renaming field for classes.
-     *
-     * @param controller Controller to act on.
-     * @param name Class name.
-     *
-     * @return Renaming field popup.
-     */
-    public static RenamingTextField forClass(GuiController controller, String name) {
-        RenamingTextField popup = new RenamingTextField(controller, name, RenamingTextField::defaultAction);
-        // Set map supplier for class renaming
-        popup.setMapSupplier(() -> {
-            String renamed = popup.getText();
-            Map<String, String> map = new HashMap<>();
-            map.put(name, renamed);
-            // Map inners as well
-            String prefix = name + "$";
-            controller.getWorkspace().getPrimaryClassNames().stream()
-                    .filter(n -> n.startsWith(prefix))
-                    .forEach(n -> map.put(n, renamed + n.substring(name.length())));
-            return map;
-        });
-        // Close class tabs with old names & open the new ones
-        popup.setOnRename((renamed) -> renamed.forEach((oldName, newName) -> {
-            // Get old tab index
-            Tab tab = controller.windows().getMainWindow().getTabs().getTab(oldName);
-            if (tab == null) {
-                return;
-            }
-            int oldIndex = controller.windows().getMainWindow().getTabs().getTabs().indexOf(tab);
-            if (oldIndex == -1) {
-                return;
-            }
-            // Close old tab
-            controller.windows().getMainWindow().getTabs().closeTab(oldName);
-            // Open new tab and move to old index
-            controller.windows().getMainWindow().openClass(controller.getWorkspace().getPrimary(), newName);
-            tab = controller.windows().getMainWindow().getTabs().getTab(newName);
-            controller.windows().getMainWindow().getTabs().getTabs().remove(tab);
-            controller.windows().getMainWindow().getTabs().getTabs().add(oldIndex, tab);
-            controller.windows().getMainWindow().getTabs().select(tab);
-        }));
-        return popup;
-    }
-
-    /**
      * Create a renaming field for packages.
      *
      * @param controller Controller to act on.
@@ -146,19 +259,9 @@ public class RenamingTextField extends PopupWindow {
      *
      * @return Renaming field popup.
      */
-    public static RenamingTextField forPackage(GuiController controller, String name) {
-        RenamingTextField popup = new RenamingTextField(controller, name, RenamingTextField::defaultAction);
-        // Set map supplier for package renaming
-        popup.setMapSupplier(() -> {
-            String renamed = popup.getText();
-            Map<String, String> map = new HashMap<>();
-            // Map all classes in the package
-            String prefix = name + "/";
-            controller.getWorkspace().getPrimaryClassNames().stream()
-                    .filter(n -> n.startsWith(prefix))
-                    .forEach(n -> map.put(n, renamed + "/" + n.substring(name.length() + 1)));
-            return map;
-        });
+    public static RenamingTextField renamePackage(GuiController controller, String name) {
+        RenamingTextField popup = new RenamingTextField(controller, "me/kitakeyos", RenamingTextField::defaultAction, false);
+        popup.oldPackage.setText(name);
         // Close class tabs with old names & open the new ones
         popup.setOnRename((renamed) -> renamed.forEach((oldName, newName) -> {
             // Get old tab index
@@ -190,17 +293,8 @@ public class RenamingTextField extends PopupWindow {
      *
      * @return Renaming field popup.
      */
-    public static RenamingTextField forDefaultPackage(GuiController controller) {
-        RenamingTextField popup = new RenamingTextField(controller, "me/kitakeyos", RenamingTextField::defaultAction);
-        // Set map supplier for package renaming
-        popup.setMapSupplier(() -> {
-            String renamed = popup.getText();
-            Map<String, String> map = new HashMap<>();
-            // Map all classes in the package
-            controller.getWorkspace().getPrimaryClassNames().stream()
-                    .filter(n -> !n.contains("/")).forEach(n -> map.put(n, renamed + "/" + n));
-            return map;
-        });
+    public static RenamingTextField renameDefaultPackage(GuiController controller) {
+        RenamingTextField popup = new RenamingTextField(controller, "me/kitakeyos", RenamingTextField::defaultAction, true);
         // Close class tabs with old names & open the new ones
         popup.setOnRename((renamed) -> renamed.forEach((oldName, newName) -> {
             // Get old tab index
@@ -224,76 +318,8 @@ public class RenamingTextField extends PopupWindow {
         return popup;
     }
 
-    /**
-     * Create a renaming field for members.
-     *
-     * @param controller Controller to act on.
-     * @param owner Member's defining class name.
-     * @param name Member name.
-     * @param desc Member descriptor.
-     *
-     * @return Renaming field popup.
-     */
-    public static RenamingTextField forMember(GuiController controller, String owner, String name, String desc) {
-        RenamingTextField popup = new RenamingTextField(controller, name, RenamingTextField::defaultAction);
-        // Set map supplier for member renaming
-        popup.setMapSupplier(() -> {
-            Map<String, String> map = new HashMap<>();
-            boolean isMethod = desc.contains("(");
-            if (isMethod) {
-                // Method references should be renamed for the entier hierarchy
-                controller.getWorkspace().getHierarchyGraph().getHierarchyNames(owner)
-                        .forEach(hierarchyMember -> map.put(hierarchyMember + "." + name + desc, popup.getText()));
-            } else {
-                // Field references may not be based on the direct class they are declared in.
-                // A child class may refer to a parent class member, using the child class as an owner.
-                // However, once a child class introduces a shadowing field name, we want to stop introducing
-                // children as owners for this mapping run.
-                map.put(owner + "." + name + " " + desc, popup.getText());
-                Workspace workspace = controller.getWorkspace();
-                workspace.getHierarchyGraph()
-                        .getAllDescendantsWithBreakCondition(owner,
-                                n -> ClassUtil.containsField(workspace.getClassReader(n), name, desc))
-                        .forEach(childOwner -> map.put(childOwner + "." + name, popup.getText()));
-            }
-            return map;
-        });
-        // Close class tab with old name & open the new one
-        popup.setOnRename(renamed -> {
-            // Get old tab index, skipping of the owner class is not currently open
-            Tab tab = controller.windows().getMainWindow().getTabs().getTab(owner);
-            if (tab == null) {
-                return;
-            }
-            int oldIndex = controller.windows().getMainWindow().getTabs().getTabs().indexOf(tab);
-            if (oldIndex == -1) {
-                return;
-            }
-            // Update display
-            ClassViewport viewport
-                    = controller.windows().getMainWindow().openClass(controller.getWorkspace().getPrimary(), owner);
-            viewport.updateView();
-        });
-        return popup;
-    }
-
-    /**
-     * Create a renaming field for files.
-     *
-     * @param controller Controller to act on.
-     * @param name File name.
-     *
-     * @return Renaming field popup.
-     */
-    public static RenamingTextField forFile(GuiController controller, String name) {
-        RenamingTextField popup = new RenamingTextField(controller, name, RenamingTextField::fileAction);
-        // Set map supplier for file renaming
-        popup.setMapSupplier(() -> {
-            String renamed = popup.getText();
-            Map<String, String> map = new HashMap<>();
-            map.put(name, renamed);
-            return map;
-        });
+    public static RenamingTextField addPrefixOrSuffix(GuiController controller, String packageName) {
+        RenamingTextField popup = new RenamingTextField(controller, RenamingTextField::defaultAction, packageName);
         // Close class tabs with old names & open the new ones
         popup.setOnRename((renamed) -> renamed.forEach((oldName, newName) -> {
             // Get old tab index
@@ -308,28 +334,13 @@ public class RenamingTextField extends PopupWindow {
             // Close old tab
             controller.windows().getMainWindow().getTabs().closeTab(oldName);
             // Open new tab and move to old index
-            controller.windows().getMainWindow().openFile(controller.getWorkspace().getPrimary(), newName);
+            controller.windows().getMainWindow().openClass(controller.getWorkspace().getPrimary(), newName);
             tab = controller.windows().getMainWindow().getTabs().getTab(newName);
             controller.windows().getMainWindow().getTabs().getTabs().remove(tab);
             controller.windows().getMainWindow().getTabs().getTabs().add(oldIndex, tab);
             controller.windows().getMainWindow().getTabs().select(tab);
         }));
         return popup;
-    }
-
-    private static void fileAction(RenamingTextField field) {
-        // Apply mappings
-        Map<String, String> map = field.mapSupplier.get();
-        Map<String, byte[]> files = field.controller.getWorkspace().getPrimary().getFiles();
-        map.forEach((oldName, newName) -> {
-            byte[] tmp = files.remove(oldName);
-            if (tmp != null) {
-                files.put(newName, tmp);
-            }
-        });
-        // Close popup
-        field.hide();
-        field.onRename.accept(map);
     }
 
     private static void defaultAction(RenamingTextField field) {
