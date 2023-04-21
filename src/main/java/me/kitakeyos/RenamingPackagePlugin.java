@@ -14,6 +14,7 @@ import org.plugface.core.annotations.Plugin;
 public class RenamingPackagePlugin implements StartupPlugin, ContextMenuInjectorPlugin {
 
     Controller controller;
+
     @Override
     public String getVersion() {
         return "1.0.1";
@@ -38,9 +39,12 @@ public class RenamingPackagePlugin implements StartupPlugin, ContextMenuInjector
             Stage stage = guiController.windows().getMainWindow().getStage();
             renamingTextField.show(stage);
         }));
+        menu.getItems().add(new ActionMenuItem("Rename all classes in this package to arabic characters", () -> {
+            GuiController guiController = builder.getController();
+            ArabicClassRenamer renamer = new ArabicClassRenamer(guiController, name.replaceAll("\\.", "/"));
+            renamer.execute();
+        }));
     }
-    
-    
 
     @Override
     public void forResourceRoot(ContextBuilder builder, ContextMenu menu, JavaResource resource) {
@@ -56,14 +60,16 @@ public class RenamingPackagePlugin implements StartupPlugin, ContextMenuInjector
             Stage stage = guiController.windows().getMainWindow().getStage();
             renamingTextField.show(stage);
         }));
+        menu.getItems().add(new ActionMenuItem("Rename all classes to arabic characters", () -> {
+            GuiController guiController = builder.getController();
+            ArabicClassRenamer renamer = new ArabicClassRenamer(guiController, null);
+            renamer.execute();
+        }));
     }
-    
 
     @Override
     public void onStart(Controller controller) {
         this.controller = controller;
     }
-    
-    
 
 }
