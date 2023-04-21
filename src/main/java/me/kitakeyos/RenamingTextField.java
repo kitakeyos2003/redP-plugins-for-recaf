@@ -20,7 +20,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -40,11 +39,13 @@ public class RenamingTextField extends PopupWindow {
     private CheckBox checkBox;
     private TextField oldPackage, newPackage;
     private TextField prefix, suffix;
+    private byte type;
     private Supplier<Map<String, String>> mapSupplier;
     private Consumer<Map<String, String>> onRename;
 
     private RenamingTextField(GuiController controller, String initialText, Consumer<RenamingTextField> renameAction, boolean isDefaultPackage) {
         this.controller = controller;
+        this.type = 0;
         setHideOnEscape(true);
         setAutoHide(true);
 
@@ -108,11 +109,12 @@ public class RenamingTextField extends PopupWindow {
                 newPackage.setText(initialText);
             }
         });
-        setRename();
+        setMapSupplier();
     }
 
     private RenamingTextField(GuiController controller, Consumer<RenamingTextField> renameAction, String packageName) {
         this.controller = controller;
+        this.type = 1;
         this.packageName = packageName;
         setHideOnEscape(true);
         setAutoHide(true);
@@ -174,74 +176,74 @@ public class RenamingTextField extends PopupWindow {
             prefix.selectAll();
 
         });
-        setPrefixOrSuffix();
+        setMapSupplier();
     }
 
-    /**
-     * @param mapSupplier Mapping generator.
-     */
-    public void setRename() {
-        this.mapSupplier = new Supplier<Map<String, String>>() {
-            @Override
-            public Map<String, String> get() {
-                if (checkBox.isSelected()) {
-                    String renamed = newPackage.getText();
-                    Map<String, String> map = new HashMap<>();
-                    // Map all classes in the package
-                    controller.getWorkspace().getPrimaryClassNames().stream()
-                            .filter(n -> !n.contains("/")).forEach(n -> map.put(n, renamed + "/" + n));
-                    return map;
-                } else {
-                    String renamed = newPackage.getText();
-                    String oldName = oldPackage.getText();
-                    Map<String, String> map = new HashMap<>();
-                    // Map all classes in the package
-                    String prefix = oldName + "/";
-                    controller.getWorkspace().getPrimaryClassNames().stream()
-                            .filter(n -> n.startsWith(prefix))
-                            .forEach(n -> map.put(n, renamed + "/" + n.substring(oldName.length() + 1)));
-                    return map;
+    public void setMapSupplier() {
+        if (type == 0) {
+            this.mapSupplier = new Supplier<Map<String, String>>() {
+                @Override
+                public Map<String, String> get() {
+                    if (checkBox.isSelected()) {
+                        String renamed = newPackage.getText();
+                        Map<String, String> map = new HashMap<>();
+                        // Map all classes in the package
+                        controller.getWorkspace().getPrimaryClassNames().stream()
+                                .filter(n -> !n.contains("/")).forEach(n -> map.put(n, renamed + "/" + n));
+                        return map;
+                    } else {
+                        String renamed = newPackage.getText();
+                        String oldName = oldPackage.getText();
+                        Map<String, String> map = new HashMap<>();
+                        // Map all classes in the package
+                        String prefix = oldName + "/";
+                        controller.getWorkspace().getPrimaryClassNames().stream()
+                                .filter(n -> n.startsWith(prefix))
+                                .forEach(n -> map.put(n, renamed + "/" + n.substring(oldName.length() + 1)));
+                        return map;
+                    }
                 }
-            }
-        };
-    }
+            };
+        } else if (type == 1) {
+            this.mapSupplier = new Supplier<Map<String, String>>() {
+                @Override
+                public Map<String, String> get() {
 
-    public void setPrefixOrSuffix() {
-        this.mapSupplier = new Supplier<Map<String, String>>() {
-            @Override
-            public Map<String, String> get() {
+                    String pf = prefix.getText();
+                    String sf = suffix.getText();
+                    if (packageName == null) {
+                        Map<String, String> map = new HashMap<>();
+                        // Map all classes in the package
+                        controller.getWorkspace().getPrimaryClassNames().stream().forEach(n -> {
+                            String pkgName = n;
+                            String[] nP = pkgName.split("/");
+                            String viewName = nP[nP.length - 1];
 
-                String pf = prefix.getText();
-                String sf = suffix.getText();
-                if (packageName == null) {
-                    Map<String, String> map = new HashMap<>();
-                    // Map all classes in the package
-                    controller.getWorkspace().getPrimaryClassNames().stream().forEach(n -> {
-                        String pkgName = n;
-                        String[] nP = pkgName.split("/");
-                        String viewName = nP[nP.length - 1];
+                            String newName = pf + viewName + sf;
+                            nP[nP.length - 1] = newName;
 
-                        String newName = pf + viewName + sf;
-                        nP[nP.length - 1] = newName;
-
-                        String result = String.join("/", nP);
-                        map.put(n, result);
-                    });
-                    return map;
-                } else {
-                    Map<String, String> map = new HashMap<>();
-                    // Map all classes in the package
-                    String prefix = packageName + "/";
-                    controller.getWorkspace().getPrimaryClassNames().stream()
-                            .filter(n -> n.startsWith(prefix))
-                            .forEach(n -> {
-                                String newName = packageName + "/" + pf + n.substring(packageName.length() + 1) + sf;
-                                map.put(n, newName);
-                            });
-                    return map;
+                            String result = String.join("/", nP);
+                            map.put(n, result);
+                        });
+                        return map;
+                    } else {
+                        Map<String, String> map = new HashMap<>();
+                        // Map all classes in the package
+                        String prefix = packageName + "/";
+                        controller.getWorkspace().getPrimaryClassNames().stream()
+                                .filter(n -> n.startsWith(prefix))
+                                .forEach(n -> {
+                                    String name = n.substring(packageName.length() + 1);
+                                    if (!name.contains("/")) {
+                                        String newName = pf + name + sf;
+                                        map.put(n, packageName + "/" + newName);
+                                    }
+                                });
+                        return map;
+                    }
                 }
-            }
-        };
+            };
+        }
     }
 
     /**

@@ -58,7 +58,6 @@ public class RenamingPackagePlugin implements StartupPlugin, ContextMenuInjector
         }));
     }
     
-    
 
     @Override
     public void onStart(Controller controller) {
