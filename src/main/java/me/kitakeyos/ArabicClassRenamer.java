@@ -68,7 +68,7 @@ public class ArabicClassRenamer {
             }
         };
     }
-    
+
     public void setOnRename(Consumer<Map<String, String>> onRename) {
         this.onRename = onRename;
     }

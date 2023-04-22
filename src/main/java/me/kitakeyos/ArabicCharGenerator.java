@@ -5,7 +5,6 @@
  */
 package me.kitakeyos;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -26,8 +25,6 @@ public class ArabicCharGenerator {
     private static final Random random = new Random();
 
     public static char generateRandomChar() {
-//        int randomNumber = random.nextInt(ARABIC_ALPHABET_END - ARABIC_ALPHABET_START + 1) + ARABIC_ALPHABET_START;
-//        return (char) randomNumber;
         int index = random.nextInt(ARABIC_ALPHABET.length);
         return ARABIC_ALPHABET[index];
     }

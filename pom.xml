@@ -34,6 +34,18 @@
             <version>2.18.3</version>
             <scope>provided</scope> <!-- Do not bundle into fatJar -->
         </dependency>
+        <dependency>
+            <groupId>org.tribuo</groupId>
+            <artifactId>tribuo-classification-mnnaivebayes</artifactId>
+            <version>4.0.2</version>
+            <!-- Why do you depend on groovy oh my god the file bloat is real -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jline</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
