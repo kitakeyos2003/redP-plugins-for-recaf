@@ -59,24 +59,31 @@ public class Processor {
         Set<ClassNode> nodes = collectNodes(matchedNames);
         // Phase 1: Create mappings for class names
         //  - following phases can use these names to enrich their naming logic
-        pooled("Analyze: Class names", service -> {
-            for (ClassNode node : nodes) {
-                service.submit(() -> analyzeClass(node));
-            }
-        });
+        if (plugin.renameClass) {
+            pooled("Analyze: Class names", service -> {
+                for (ClassNode node : nodes) {
+                    service.submit(() -> analyzeClass(node));
+                }
+            });
+        }
         // Phase 2: Create mappings for field names
         //  - methods can now use class and field names to enrich their naming logic
-        pooled("Analyze: Field names", service -> {
-            for (ClassNode node : nodes) {
-                service.submit(() -> analyzeFields(node));
-            }
-        });
-        // Phase 3: Create mappings for method names
-        pooled("Analyze: Method names", service -> {
-            for (ClassNode node : nodes) {
-                service.submit(() -> analyzeMethods(node));
-            }
-        });
+        if (plugin.renameField) {
+            pooled("Analyze: Field names", service -> {
+                for (ClassNode node : nodes) {
+                    service.submit(() -> analyzeFields(node));
+                }
+            });
+        }
+
+        //Phase 3: Create mappings for method names
+        if (plugin.renameMethod) {
+            pooled("Analyze: Method names", service -> {
+                for (ClassNode node : nodes) {
+                    service.submit(() -> analyzeMethods(node));
+                }
+            });
+        }
     }
 
     /**
@@ -167,7 +174,7 @@ public class Processor {
                     mappings.put(oldClassName + "." + oldMethodName + method.desc, newMethodName);
                 }
                 // Method variable names
-                if (!plugin.pruneDebugInfo && method.localVariables != null) {
+                if (!plugin.pruneDebugInfo && method.localVariables != null && plugin.renameVariable) {
                     for (LocalVariableNode local : method.localVariables) {
                         String newLocalName = generator.createVariableName(method, local);
                         // Locals do not get globally mapped, so we handle renaming them locally here

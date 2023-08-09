@@ -291,7 +291,6 @@ public class RenamingTextField extends PopupWindow {
      * Create a renaming field for default packages.
      *
      * @param controller Controller to act on.
-     * @param name Package name.
      *
      * @return Renaming field popup.
      */

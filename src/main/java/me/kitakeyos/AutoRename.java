@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javafx.stage.Stage;
 
 /**
  * A plugin that adds context menus to decompile a class, a package, or the
@@ -43,6 +44,12 @@ public class AutoRename implements StartupPlugin, ContextMenuInjectorPlugin, Con
     private static final String SHORT_CUTOFF = "Short name cutoff";
     private static final String PRUNE_DEBUG = "Remove debug info";
     private static final String INTELLI_THRESH = "Intelligent guess (%) threshold";
+    
+    private static final String RENAME_CLASS = "Rename class";
+    private static final String RENAME_METHOD = "Rename method";
+    private static final String RENAME_FIELD = "Rename field";
+    private static final String RENAME_VARIABLE = "Rename variable";
+    
     private Controller controller;
 
     @Conf(value = NAME_PATTERN, noTranslate = true)
@@ -62,13 +69,22 @@ public class AutoRename implements StartupPlugin, ContextMenuInjectorPlugin, Con
 
     @Conf(value = PRUNE_DEBUG, noTranslate = true)
     public boolean pruneDebugInfo;
+    
+    @Conf(value = RENAME_CLASS, noTranslate = true)
+    public boolean renameClass = true;
+    @Conf(value = RENAME_METHOD, noTranslate = true)
+    public boolean renameMethod = false;
+    @Conf(value = RENAME_FIELD, noTranslate = true)
+    public boolean renameField = true;
+    @Conf(value = RENAME_VARIABLE, noTranslate = true)
+    public boolean renameVariable = true;
 
     // TODO: Should this be a modifiable conf value, or just a reasonable const?
     public int phaseTimeout = 10;
 
     @Override
     public String getVersion() {
-        return "1.0.0";
+        return "1.0.2";
     }
 
     @Override
@@ -90,7 +106,19 @@ public class AutoRename implements StartupPlugin, ContextMenuInjectorPlugin, Con
     @Override
     public void forPackage(ContextBuilder builder, ContextMenu menu, String name) {
         menu.getItems().add(new ActionMenuItem("Auto rename classes",
-                () -> rename(Pattern.quote(name) + "/.*", builder.getResource())));
+                () -> rename(name.replaceAll("\\.", "/") + "/.*", builder.getResource())));
+        menu.getItems().add(new ActionMenuItem("Rename package", () -> {
+            GuiController guiController = builder.getController();
+            RenamingTextField renamingTextField = RenamingTextField.renamePackage(guiController, name.replaceAll("\\.", "/"));
+            Stage stage = guiController.windows().getMainWindow().getStage();
+            renamingTextField.show(stage);
+        }));
+        menu.getItems().add(new ActionMenuItem("Add Prefix/Suffix to Classes in Package", () -> {
+            GuiController guiController = builder.getController();
+            RenamingTextField renamingTextField = RenamingTextField.addPrefixOrSuffix(guiController, name.replaceAll("\\.", "/"));
+            Stage stage = guiController.windows().getMainWindow().getStage();
+            renamingTextField.show(stage);
+        }));
     }
 
     @Override
@@ -103,6 +131,18 @@ public class AutoRename implements StartupPlugin, ContextMenuInjectorPlugin, Con
     public void forResourceRoot(ContextBuilder builder, ContextMenu menu, JavaResource resource) {
         menu.getItems().add(new ActionMenuItem("Auto rename all",
                 () -> rename(".*", resource)));
+        menu.getItems().add(new ActionMenuItem("Rename default package", () -> {
+            GuiController guiController = builder.getController();
+            RenamingTextField renamingTextField = RenamingTextField.renameDefaultPackage(guiController);
+            Stage stage = guiController.windows().getMainWindow().getStage();
+            renamingTextField.show(stage);
+        }));
+        menu.getItems().add(new ActionMenuItem("Add prefix/suffix for all classes ", () -> {
+            GuiController guiController = builder.getController();
+            RenamingTextField renamingTextField = RenamingTextField.addPrefixOrSuffix(guiController, null);
+            Stage stage = guiController.windows().getMainWindow().getStage();
+            renamingTextField.show(stage);
+        }));
     }
 
     private void rename(String namePattern, JavaResource resource) {

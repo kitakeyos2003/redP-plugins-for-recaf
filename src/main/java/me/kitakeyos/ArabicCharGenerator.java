@@ -44,31 +44,12 @@ public class ArabicCharGenerator {
         return sb.toString();
     }
 
-    public static Map<String, String> generateRandomSpecialCharMap(List<String> list) {
-        Map<String, String> map = new HashMap<>();
-        Set<String> usedValues = new HashSet<>();
-
-        for (String s : list) {
-            int lastSlashIndex = s.lastIndexOf('/');
-            String prefix = s.substring(0, lastSlashIndex + 1);
-            String suffix = s.substring(lastSlashIndex + 1);
-
-            StringBuilder sb = new StringBuilder();
-            for (char c : suffix.toCharArray()) {
-                String specialChar = getUniqueSpecialChar(usedValues);
-                usedValues.add(specialChar);
-                sb.append(specialChar);
-            }
-            map.put(s, prefix + sb.toString());
-        }
-        return map;
-    }
-
-    private static String getUniqueSpecialChar(Set<String> usedValues) {
+    public static String getUniqueSpecialChar(Set<String> usedValues) {
         String specialChar;
         do {
-            specialChar = generateRandomString(random.nextInt(1) + 10);
+            specialChar = generateRandomString(random.nextInt(100) + 10);
         } while (usedValues.contains(specialChar));
+        usedValues.add(specialChar);
         return specialChar;
     }
 }

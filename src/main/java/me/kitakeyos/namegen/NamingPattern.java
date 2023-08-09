@@ -12,7 +12,8 @@ import me.coley.recaf.util.StringUtil;
 public enum NamingPattern {
     INTELLIGENT,
     SOURCE_FILE,
-    SIMPLE;
+    SIMPLE,
+    ARABIC;
 
     @Override
     public String toString() {
@@ -23,6 +24,8 @@ public enum NamingPattern {
                 return "Match source file";
             case SIMPLE:
                 return "Simple";
+            case ARABIC:
+                return "Arabic";
             default:
                 return StringUtil.toString(this);
         }
@@ -43,6 +46,8 @@ public enum NamingPattern {
                 return new SourceFileStrategy(controller);
             case SIMPLE:
                 return new SimpleStrategy(controller);
+            case ARABIC:
+                return new ArabicStrategy(controller);
             default:
                 throw new UnsupportedOperationException("Unsupported naming pattern: " + name());
         }

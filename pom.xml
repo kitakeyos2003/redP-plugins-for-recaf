@@ -3,7 +3,7 @@
     <!-- Your personal package -->
     <groupId>me.kitakeyos</groupId>
     <artifactId>redP</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <name>RenamingPackage</name>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
