@@ -29,7 +29,7 @@ public class NameGenerator {
      * @param packageOverride Package name to put classes into. Must be
      * {@code null} to keep existing package structures.
      */
-    public NameGenerator(Controller controller, AutoRename plugin, String packageOverride) {
+    public NameGenerator(Controller controller, RedP plugin, String packageOverride) {
         this.scopeFilter = plugin.namingScope.createFilter(plugin);
         this.namingStrategy = plugin.namingPattern.createStrategy(controller, plugin);
         this.packageOverride = packageOverride;

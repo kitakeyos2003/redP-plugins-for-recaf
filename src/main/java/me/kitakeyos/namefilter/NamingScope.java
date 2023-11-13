@@ -1,6 +1,6 @@
 package me.kitakeyos.namefilter;
 
-import me.kitakeyos.AutoRename;
+import me.kitakeyos.RedP;
 import me.coley.recaf.util.StringUtil;
 
 /**
@@ -32,7 +32,7 @@ public enum NamingScope {
      *
      * @return A filter instance to match the current scope type.
      */
-    public ScopeFilter createFilter(AutoRename plugin) {
+    public ScopeFilter createFilter(RedP plugin) {
         switch (this) {
             case ALL:
                 return name -> true;

@@ -1,7 +1,7 @@
 package me.kitakeyos.namegen;
 
 import me.coley.recaf.control.Controller;
-import me.kitakeyos.AutoRename;
+import me.kitakeyos.RedP;
 import me.coley.recaf.util.StringUtil;
 
 /**
@@ -37,7 +37,7 @@ public enum NamingPattern {
      *
      * @return A naming strategy to create appropriate names for items.
      */
-    public NameStrategy createStrategy(Controller controller, AutoRename plugin) {
+    public NameStrategy createStrategy(Controller controller, RedP plugin) {
         switch (this) {
             case INTELLIGENT:
                 double classificationThreshold = plugin.intelligentGuessThreshold / 100.0;

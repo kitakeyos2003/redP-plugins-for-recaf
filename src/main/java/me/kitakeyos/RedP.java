@@ -21,9 +21,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javafx.stage.Stage;
+import me.coley.recaf.util.Log;
 
 /**
  * A plugin that adds context menus to decompile a class, a package, or the
@@ -32,10 +32,8 @@ import javafx.stage.Stage;
  *
  * @author Matt Coley
  */
-@Plugin(name = "Auto Renamer")
-public class AutoRename implements StartupPlugin, ContextMenuInjectorPlugin, ConfigurablePlugin {
-    // Consts
-
+@Plugin(name = "REDP")
+public class RedP implements StartupPlugin, ContextMenuInjectorPlugin, ConfigurablePlugin {
     public static final String FLAT_PACKAGE_NAME = "renamed/";
     // Config keys
     private static final String KEEP_P_STRUCT = "Keep package layout";
@@ -49,6 +47,7 @@ public class AutoRename implements StartupPlugin, ContextMenuInjectorPlugin, Con
     private static final String RENAME_METHOD = "Rename method";
     private static final String RENAME_FIELD = "Rename field";
     private static final String RENAME_VARIABLE = "Rename variable";
+    private static final String DROP_MALFORMED_ATTRIBUTES = "Drop malformed attributes from classes added by obfuscators";
     
     private Controller controller;
 
@@ -78,6 +77,8 @@ public class AutoRename implements StartupPlugin, ContextMenuInjectorPlugin, Con
     public boolean renameField = true;
     @Conf(value = RENAME_VARIABLE, noTranslate = true)
     public boolean renameVariable = true;
+    @Conf(value = DROP_MALFORMED_ATTRIBUTES, noTranslate = true)
+    public boolean dropMalformedAttributes = true;
 
     // TODO: Should this be a modifiable conf value, or just a reasonable const?
     public int phaseTimeout = 10;
@@ -146,6 +147,7 @@ public class AutoRename implements StartupPlugin, ContextMenuInjectorPlugin, Con
     }
 
     private void rename(String namePattern, JavaResource resource) {
+        Log.debug("namePattern: " + namePattern);
         Set<String> matchedNames = resource.getClasses().keySet().stream()
                 .filter(name -> name.matches(namePattern))
                 .collect(Collectors.toSet());
@@ -160,6 +162,6 @@ public class AutoRename implements StartupPlugin, ContextMenuInjectorPlugin, Con
 
     @Override
     public String getConfigTabTitle() {
-        return "Auto Renamer";
+        return "REDP";
     }
 }

@@ -1,5 +1,10 @@
 package me.kitakeyos;
 
+import me.coley.cafedude.InvalidClassException;
+import me.coley.cafedude.classfile.ClassFile;
+import me.coley.cafedude.io.ClassFileReader;
+import me.coley.cafedude.io.ClassFileWriter;
+import me.coley.cafedude.transform.IllegalStrippingTransformer;
 import me.coley.recaf.control.Controller;
 import me.coley.recaf.mapping.Mappings;
 import me.coley.recaf.util.ClassUtil;
@@ -10,11 +15,7 @@ import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodNode;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,18 +31,18 @@ public class Processor {
 
     private final Map<String, String> mappings = new ConcurrentHashMap<>();
     private final Controller controller;
-    private final AutoRename plugin;
+    private final RedP plugin;
     private final NameGenerator generator;
 
     /**
      * @param controller Controller with workspace to pull classes from.
      * @param plugin Plugin with config values.
      */
-    public Processor(Controller controller, AutoRename plugin) {
+    public Processor(Controller controller, RedP plugin) {
         this.controller = controller;
         this.plugin = plugin;
         // Configure name generator
-        String packageName = plugin.keepPackageLayout ? null : AutoRename.FLAT_PACKAGE_NAME;
+        String packageName = plugin.keepPackageLayout ? null : RedP.FLAT_PACKAGE_NAME;
         generator = new NameGenerator(controller, plugin, packageName);
     }
 
@@ -57,6 +58,28 @@ public class Processor {
         // Analyze each class in separate phases
         // Phase 0: Prepare class nodes
         Set<ClassNode> nodes = collectNodes(matchedNames);
+        if (plugin.dropMalformedAttributes) {
+            pooled("Drop malformed attributes from classes added by obfuscators", service -> {
+
+                ClassFileReader cr = new ClassFileReader();
+                ClassFileWriter cw = new ClassFileWriter();
+                for (ClassNode node : nodes) {
+                    try {
+                        byte[] codeOriginal = ClassUtil.toCode(node, ClassReader.SKIP_CODE);
+                        ClassFile cf = cr.read(codeOriginal);
+                        new IllegalStrippingTransformer(cf).transform();
+                        byte[] code = cw.write(cf);
+                        ClassReader reader = new ClassReader(code);
+                        reader.accept(node, ClassReader.SKIP_CODE);
+                        if (Arrays.equals(codeOriginal, code)) {
+                            Log.info("Drop malformed attributes from class " + node.name);
+                        }
+                    } catch (InvalidClassException e) {
+                        Log.error("Invalid class", e);
+                    }
+                }
+            });
+        }
         // Phase 1: Create mappings for class names
         //  - following phases can use these names to enrich their naming logic
         if (plugin.renameClass) {
@@ -81,6 +104,12 @@ public class Processor {
             pooled("Analyze: Method names", service -> {
                 for (ClassNode node : nodes) {
                     service.submit(() -> analyzeMethods(node));
+                }
+            });
+        } else if (plugin.renameVariable) {
+            pooled("Analyze: Variable names", service -> {
+                for (ClassNode node : nodes) {
+                    service.submit(() -> analyzeVariables(node));
                 }
             });
         }
@@ -175,6 +204,30 @@ public class Processor {
                 }
                 // Method variable names
                 if (!plugin.pruneDebugInfo && method.localVariables != null && plugin.renameVariable) {
+                    for (LocalVariableNode local : method.localVariables) {
+                        String newLocalName = generator.createVariableName(method, local);
+                        // Locals do not get globally mapped, so we handle renaming them locally here
+                        if (newLocalName != null) {
+                            local.name = newLocalName;
+                        }
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            Log.error(t, "Error occurred in Processor#analyzeMethods");
+        }
+    }
+
+    /**
+     * Generate mappings for variable names.
+     *
+     * @param node Class with variables to rename.
+     */
+    private void analyzeVariables(ClassNode node) {
+        try {
+            for (MethodNode method : node.methods) {
+                // Method variable names
+                if (method.localVariables != null && plugin.renameVariable) {
                     for (LocalVariableNode local : method.localVariables) {
                         String newLocalName = generator.createVariableName(method, local);
                         // Locals do not get globally mapped, so we handle renaming them locally here
