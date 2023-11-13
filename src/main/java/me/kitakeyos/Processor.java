@@ -14,7 +14,6 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodNode;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -53,33 +52,35 @@ public class Processor {
      * @param matchedNames Set of class names to analyze.
      */
     public void analyze(Set<String> matchedNames) {
+        if (plugin.dropMalformedAttributes) {
+            pooled("Drop malformed attributes", service -> {
+                ClassFileReader cr = new ClassFileReader();
+                ClassFileWriter cw = new ClassFileWriter();
+                for (Map.Entry<String, byte[]> entry : controller.getWorkspace().getPrimary().getClasses().entrySet()) {
+                    if (matchedNames.stream().anyMatch(s -> s.equals(entry.getKey()))) {
+                        try {
+                            byte[] code = entry.getValue();
+                            ClassFile cf = cr.read(code);
+                            IllegalStrippingTransformer transformer = new IllegalStrippingTransformer(cf);
+                            transformer.transform();
+                            byte[] modified = cw.write(cf);
+                            if (!Arrays.equals(code, modified)) {
+                                entry.setValue(modified);
+                                Log.info("Drop malformed attributes from class " + entry.getKey());
+                            }
+                        } catch (InvalidClassException e) {
+                            Log.error("Invalid class", e);
+                        }
+                    }
+                }
+            });
+        }
         // Reset mappings
         mappings.clear();
         // Analyze each class in separate phases
         // Phase 0: Prepare class nodes
         Set<ClassNode> nodes = collectNodes(matchedNames);
-        if (plugin.dropMalformedAttributes) {
-            pooled("Drop malformed attributes from classes added by obfuscators", service -> {
 
-                ClassFileReader cr = new ClassFileReader();
-                ClassFileWriter cw = new ClassFileWriter();
-                for (ClassNode node : nodes) {
-                    try {
-                        byte[] codeOriginal = ClassUtil.toCode(node, ClassReader.SKIP_CODE);
-                        ClassFile cf = cr.read(codeOriginal);
-                        new IllegalStrippingTransformer(cf).transform();
-                        byte[] code = cw.write(cf);
-                        ClassReader reader = new ClassReader(code);
-                        reader.accept(node, ClassReader.SKIP_CODE);
-                        if (Arrays.equals(codeOriginal, code)) {
-                            Log.info("Drop malformed attributes from class " + node.name);
-                        }
-                    } catch (InvalidClassException e) {
-                        Log.error("Invalid class", e);
-                    }
-                }
-            });
-        }
         // Phase 1: Create mappings for class names
         //  - following phases can use these names to enrich their naming logic
         if (plugin.renameClass) {
