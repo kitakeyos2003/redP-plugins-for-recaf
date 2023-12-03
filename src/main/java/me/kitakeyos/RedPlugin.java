@@ -33,7 +33,7 @@ import me.coley.recaf.util.Log;
  * @author Matt Coley
  */
 @Plugin(name = "REDP")
-public class RedP implements StartupPlugin, ContextMenuInjectorPlugin, ConfigurablePlugin {
+public class RedPlugin implements StartupPlugin, ContextMenuInjectorPlugin, ConfigurablePlugin {
     public static final String FLAT_PACKAGE_NAME = "renamed/";
     // Config keys
     private static final String KEEP_P_STRUCT = "Keep package layout";
@@ -72,7 +72,7 @@ public class RedP implements StartupPlugin, ContextMenuInjectorPlugin, Configura
     @Conf(value = RENAME_CLASS, noTranslate = true)
     public boolean renameClass = true;
     @Conf(value = RENAME_METHOD, noTranslate = true)
-    public boolean renameMethod = false;
+    public boolean renameMethod = true;
     @Conf(value = RENAME_FIELD, noTranslate = true)
     public boolean renameField = true;
     @Conf(value = RENAME_VARIABLE, noTranslate = true)

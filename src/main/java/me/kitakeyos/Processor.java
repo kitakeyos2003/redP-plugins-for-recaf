@@ -30,18 +30,18 @@ public class Processor {
 
     private final Map<String, String> mappings = new ConcurrentHashMap<>();
     private final Controller controller;
-    private final RedP plugin;
+    private final RedPlugin plugin;
     private final NameGenerator generator;
 
     /**
      * @param controller Controller with workspace to pull classes from.
      * @param plugin Plugin with config values.
      */
-    public Processor(Controller controller, RedP plugin) {
+    public Processor(Controller controller, RedPlugin plugin) {
         this.controller = controller;
         this.plugin = plugin;
         // Configure name generator
-        String packageName = plugin.keepPackageLayout ? null : RedP.FLAT_PACKAGE_NAME;
+        String packageName = plugin.keepPackageLayout ? null : RedPlugin.FLAT_PACKAGE_NAME;
         generator = new NameGenerator(controller, plugin, packageName);
     }
 
@@ -191,17 +191,18 @@ public class Processor {
     private void analyzeMethods(ClassNode node) {
         try {
             // Class name
-            String oldClassName = node.name;
+            String owner = node.name;
             // Method names
             for (MethodNode method : node.methods) {
                 // Skip constructor/static-block
                 if (method.name.charAt(0) == '<') {
                     continue;
                 }
-                String oldMethodName = method.name;
-                String newMethodName = generator.createMethodName(node, method);
-                if (newMethodName != null) {
-                    mappings.put(oldClassName + "." + oldMethodName + method.desc, newMethodName);
+                String name = method.name;
+                String desc = method.desc;
+                String newName = generator.createMethodName(node, method);
+                if (newName != null) {
+                    controller.getWorkspace().getHierarchyGraph().getHierarchyNames(owner).forEach(hierarchyMember -> mappings.put(hierarchyMember + "." + name + desc, newName));
                 }
                 // Method variable names
                 if (!plugin.pruneDebugInfo && method.localVariables != null && plugin.renameVariable) {
