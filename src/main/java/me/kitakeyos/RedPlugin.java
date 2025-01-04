@@ -23,7 +23,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javafx.stage.Stage;
-import me.coley.recaf.util.Log;
 
 /**
  * A plugin that adds context menus to decompile a class, a package, or the
@@ -32,7 +31,7 @@ import me.coley.recaf.util.Log;
  *
  * @author Matt Coley
  */
-@Plugin(name = "REDP")
+@Plugin(name = "redP")
 public class RedPlugin implements StartupPlugin, ContextMenuInjectorPlugin, ConfigurablePlugin {
     public static final String FLAT_PACKAGE_NAME = "renamed/";
     // Config keys
@@ -72,20 +71,18 @@ public class RedPlugin implements StartupPlugin, ContextMenuInjectorPlugin, Conf
     @Conf(value = RENAME_CLASS, noTranslate = true)
     public boolean renameClass = true;
     @Conf(value = RENAME_METHOD, noTranslate = true)
-    public boolean renameMethod = true;
+    public boolean renameMethod = false;
     @Conf(value = RENAME_FIELD, noTranslate = true)
-    public boolean renameField = true;
+    public boolean renameField = false;
     @Conf(value = RENAME_VARIABLE, noTranslate = true)
-    public boolean renameVariable = true;
+    public boolean renameVariable = false;
     @Conf(value = DROP_MALFORMED_ATTRIBUTES, noTranslate = true)
-    public boolean dropMalformedAttributes = true;
-
-    // TODO: Should this be a modifiable conf value, or just a reasonable const?
+    public boolean dropMalformedAttributes = false;
     public int phaseTimeout = 10;
 
     @Override
     public String getVersion() {
-        return "1.0.2";
+        return "1.0.4";
     }
 
     @Override
@@ -106,9 +103,9 @@ public class RedPlugin implements StartupPlugin, ContextMenuInjectorPlugin, Conf
 
     @Override
     public void forPackage(ContextBuilder builder, ContextMenu menu, String name) {
-        menu.getItems().add(new ActionMenuItem("Auto rename classes",
+        menu.getItems().add(new ActionMenuItem("Auto Rename Classes in Package",
                 () -> rename(name.replaceAll("\\.", "/") + "/.*", builder.getResource())));
-        menu.getItems().add(new ActionMenuItem("Rename package", () -> {
+        menu.getItems().add(new ActionMenuItem("Rename Package", () -> {
             GuiController guiController = builder.getController();
             RenamingTextField renamingTextField = RenamingTextField.renamePackage(guiController, name.replaceAll("\\.", "/"));
             Stage stage = guiController.windows().getMainWindow().getStage();
@@ -124,15 +121,15 @@ public class RedPlugin implements StartupPlugin, ContextMenuInjectorPlugin, Conf
 
     @Override
     public void forClass(ContextBuilder builder, ContextMenu menu, String name) {
-        menu.getItems().add(new ActionMenuItem("Auto rename class",
-                () -> rename(Collections.singleton(name), builder.getResource())));
+        menu.getItems().add(new ActionMenuItem("Auto Rename This Class",
+                () -> rename(Collections.singleton(name))));
     }
 
     @Override
     public void forResourceRoot(ContextBuilder builder, ContextMenu menu, JavaResource resource) {
-        menu.getItems().add(new ActionMenuItem("Auto rename all",
+        menu.getItems().add(new ActionMenuItem("Auto Rename All Classes",
                 () -> rename(".*", resource)));
-        menu.getItems().add(new ActionMenuItem("Rename default package", () -> {
+        menu.getItems().add(new ActionMenuItem("Rename Default Package", () -> {
             GuiController guiController = builder.getController();
             RenamingTextField renamingTextField = RenamingTextField.renameDefaultPackage(guiController);
             Stage stage = guiController.windows().getMainWindow().getStage();
@@ -147,14 +144,13 @@ public class RedPlugin implements StartupPlugin, ContextMenuInjectorPlugin, Conf
     }
 
     private void rename(String namePattern, JavaResource resource) {
-        Log.debug("namePattern: " + namePattern);
         Set<String> matchedNames = resource.getClasses().keySet().stream()
                 .filter(name -> name.matches(namePattern))
                 .collect(Collectors.toSet());
-        rename(matchedNames, resource);
+        rename(matchedNames);
     }
 
-    private void rename(Set<String> matchedNames, JavaResource resource) {
+    private void rename(Set<String> matchedNames) {
         Processor processor = new Processor(controller, this);
         processor.analyze(matchedNames);
         processor.apply();
@@ -162,6 +158,6 @@ public class RedPlugin implements StartupPlugin, ContextMenuInjectorPlugin, Conf
 
     @Override
     public String getConfigTabTitle() {
-        return "REDP";
+        return "RedPlugin";
     }
 }

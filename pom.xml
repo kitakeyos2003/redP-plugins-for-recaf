@@ -3,7 +3,7 @@
     <!-- Your personal package -->
     <groupId>me.kitakeyos</groupId>
     <artifactId>redP</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.4</version>
     <name>RenamingPackage</name>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -50,6 +50,11 @@
             <groupId>com.github.Col-E</groupId>
             <artifactId>CAFED00D</artifactId>
             <version>1.10.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.Col-E</groupId>
+            <artifactId>Simple-Memory-Compiler</artifactId>
+            <version>2.2</version>
         </dependency>
     </dependencies>
     <build>

@@ -1,6 +1,7 @@
 package me.kitakeyos.namegen;
 
 import me.coley.recaf.control.Controller;
+import me.kitakeyos.Processor;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.LocalVariableNode;
@@ -17,27 +18,26 @@ public class SimpleStrategy extends AbstractNameStrategy {
     private int classIndex = 1;
     private int fieldIndex = 1;
     private int methodIndex = 1;
+    private final Processor processor;
 
-    public SimpleStrategy(Controller controller) {
+    public SimpleStrategy(Controller controller, Processor processor) {
         super(controller);
+        this.processor = processor;
     }
 
     @Override
     public boolean allowMultiThread() {
-        // Because we are incrementing fields/methods in order we cannot have
-        // two classes incrementing the same index.
-        // This would cause both classes to appear to skip indices.
         return false;
     }
 
     @Override
     public String className(ClassNode node) {
-        return "Class" + (classIndex++);
+        return "C" + (classIndex++);
     }
 
     @Override
     public String fieldName(ClassNode owner, FieldNode field) {
-        return "field" + (fieldIndex++);
+        return "f" + (fieldIndex++);
     }
 
     @Override
@@ -51,12 +51,11 @@ public class SimpleStrategy extends AbstractNameStrategy {
         if (parentMapped != null) {
             return parentMapped;
         }
-        // Create a new name
-        return "method" + (methodIndex++);
+        return "m" + (methodIndex++);
     }
 
     @Override
     public String variable(MethodNode method, LocalVariableNode local) {
-        return "local" + local.index;
+        return "lc" + local.index;
     }
 }

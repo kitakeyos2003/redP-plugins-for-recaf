@@ -1,6 +1,7 @@
 package me.kitakeyos.namegen;
 
 import me.coley.recaf.control.Controller;
+import me.kitakeyos.Processor;
 import me.kitakeyos.RedPlugin;
 import me.coley.recaf.util.StringUtil;
 
@@ -37,7 +38,7 @@ public enum NamingPattern {
      *
      * @return A naming strategy to create appropriate names for items.
      */
-    public NameStrategy createStrategy(Controller controller, RedPlugin plugin) {
+    public NameStrategy createStrategy(Controller controller, RedPlugin plugin, Processor processor) {
         switch (this) {
             case INTELLIGENT:
                 double classificationThreshold = plugin.intelligentGuessThreshold / 100.0;
@@ -45,7 +46,7 @@ public enum NamingPattern {
             case SOURCE_FILE:
                 return new SourceFileStrategy(controller);
             case SIMPLE:
-                return new SimpleStrategy(controller);
+                return new SimpleStrategy(controller, processor);
             case ARABIC:
                 return new ArabicStrategy(controller);
             default:

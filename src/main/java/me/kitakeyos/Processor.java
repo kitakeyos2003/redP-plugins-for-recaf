@@ -28,7 +28,7 @@ import java.util.function.Consumer;
  */
 public class Processor {
 
-    private final Map<String, String> mappings = new ConcurrentHashMap<>();
+    public final Map<String, String> mappings = new ConcurrentHashMap<>();
     private final Controller controller;
     private final RedPlugin plugin;
     private final NameGenerator generator;
@@ -42,7 +42,7 @@ public class Processor {
         this.plugin = plugin;
         // Configure name generator
         String packageName = plugin.keepPackageLayout ? null : RedPlugin.FLAT_PACKAGE_NAME;
-        generator = new NameGenerator(controller, plugin, packageName);
+        generator = new NameGenerator(controller, plugin, packageName, this);
     }
 
     /**
@@ -52,31 +52,33 @@ public class Processor {
      * @param matchedNames Set of class names to analyze.
      */
     public void analyze(Set<String> matchedNames) {
-        if (plugin.dropMalformedAttributes) {
-            pooled("Drop malformed attributes", service -> {
-                ClassFileReader cr = new ClassFileReader();
-                ClassFileWriter cw = new ClassFileWriter();
-                for (Map.Entry<String, byte[]> entry : controller.getWorkspace().getPrimary().getClasses().entrySet()) {
-                    if (matchedNames.stream().anyMatch(s -> s.equals(entry.getKey()))) {
-                        try {
-                            byte[] code = entry.getValue();
-                            ClassFile cf = cr.read(code);
-                            IllegalStrippingTransformer transformer = new IllegalStrippingTransformer(cf);
-                            transformer.transform();
-                            byte[] modified = cw.write(cf);
-                            if (!Arrays.equals(code, modified)) {
-                                entry.setValue(modified);
-                                Log.info("Drop malformed attributes from class " + entry.getKey());
-                            }
-                        } catch (InvalidClassException e) {
-                            Log.error("Invalid class", e);
-                        }
-                    }
-                }
-            });
-        }
         // Reset mappings
         mappings.clear();
+        if (plugin.dropMalformedAttributes) {
+            pooled("Drop malformed attributes", service -> {
+                service.submit(() -> {
+                    ClassFileReader cr = new ClassFileReader();
+                    ClassFileWriter cw = new ClassFileWriter();
+                    for (Map.Entry<String, byte[]> entry : controller.getWorkspace().getPrimary().getClasses().entrySet()) {
+                        if (matchedNames.stream().anyMatch(s -> s.equals(entry.getKey()))) {
+                            try {
+                                byte[] code = entry.getValue();
+                                ClassFile cf = cr.read(code);
+                                IllegalStrippingTransformer transformer = new IllegalStrippingTransformer(cf);
+                                transformer.transform();
+                                byte[] modified = cw.write(cf);
+                                if (!Arrays.equals(code, modified)) {
+                                    entry.setValue(modified);
+                                    Log.info("Drop malformed attributes from class " + entry.getKey());
+                                }
+                            } catch (InvalidClassException e) {
+                                Log.error("Invalid class", e);
+                            }
+                        }
+                    }
+                });
+            });
+        }
         // Analyze each class in separate phases
         // Phase 0: Prepare class nodes
         Set<ClassNode> nodes = collectNodes(matchedNames);
@@ -147,7 +149,7 @@ public class Processor {
     private void analyzeClass(ClassNode node) {
         try {
             // Skip special cases: 'module-info'/'package-info'
-            if (node.name.matches("(?:[\\w\\/]+\\/)?(?:module|package)-info")) {
+            if (node.name.matches("(?:[\\w/]+/)?(?:module|package)-info")) {
                 return;
             }
             // Class name
@@ -240,7 +242,7 @@ public class Processor {
                 }
             }
         } catch (Throwable t) {
-            Log.error(t, "Error occurred in Processor#analyzeMethods");
+            Log.error(t, "Error occurred in Processor#analyzeVariables");
         }
     }
 

@@ -205,42 +205,38 @@ public class RenamingTextField extends PopupWindow {
                 }
             };
         } else if (type == 1) {
-            this.mapSupplier = new Supplier<Map<String, String>>() {
-                @Override
-                public Map<String, String> get() {
+            this.mapSupplier = () -> {
 
-                    String pf = prefix.getText();
-                    String sf = suffix.getText();
-                    if (packageName == null) {
-                        Map<String, String> map = new HashMap<>();
-                        // Map all classes in the package
-                        controller.getWorkspace().getPrimaryClassNames().stream().forEach(n -> {
-                            String pkgName = n;
-                            String[] nP = pkgName.split("/");
-                            String viewName = nP[nP.length - 1];
+                String pf = prefix.getText();
+                String sf = suffix.getText();
+                if (packageName == null) {
+                    Map<String, String> map = new HashMap<>();
+                    // Map all classes in the package
+                    controller.getWorkspace().getPrimaryClassNames().forEach(n -> {
+                        String[] nP = n.split("/");
+                        String viewName = nP[nP.length - 1];
 
-                            String newName = pf + viewName + sf;
-                            nP[nP.length - 1] = newName;
+                        String newName = pf + viewName + sf;
+                        nP[nP.length - 1] = newName;
 
-                            String result = String.join("/", nP);
-                            map.put(n, result);
-                        });
-                        return map;
-                    } else {
-                        Map<String, String> map = new HashMap<>();
-                        // Map all classes in the package
-                        String prefix = packageName + "/";
-                        controller.getWorkspace().getPrimaryClassNames().stream()
-                                .filter(n -> n.startsWith(prefix))
-                                .forEach(n -> {
-                                    String name = n.substring(packageName.length() + 1);
-                                    if (!name.contains("/")) {
-                                        String newName = pf + name + sf;
-                                        map.put(n, packageName + "/" + newName);
-                                    }
-                                });
-                        return map;
-                    }
+                        String result = String.join("/", nP);
+                        map.put(n, result);
+                    });
+                    return map;
+                } else {
+                    Map<String, String> map = new HashMap<>();
+                    // Map all classes in the package
+                    String prefix = packageName + "/";
+                    controller.getWorkspace().getPrimaryClassNames().stream()
+                            .filter(n -> n.startsWith(prefix))
+                            .forEach(n -> {
+                                String name = n.substring(packageName.length() + 1);
+                                if (!name.contains("/")) {
+                                    String newName = pf + name + sf;
+                                    map.put(n, packageName + "/" + newName);
+                                }
+                            });
+                    return map;
                 }
             };
         }

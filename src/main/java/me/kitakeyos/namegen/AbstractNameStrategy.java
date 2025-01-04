@@ -94,8 +94,6 @@ public abstract class AbstractNameStrategy implements NameStrategy {
      */
     protected boolean isLibrary(ClassNode owner, MethodNode method) {
         String methodKey = methodKey(owner, method);
-        // Check if we've already computed if the method is a library one or not.
-        // Need to use boxed type for nullability.
         Boolean cached = isLibraryMethodCache.get(methodKey);
         if (cached == null) {
             cached = graph.isLibrary(owner.name, method.name, method.desc);
